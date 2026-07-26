@@ -6,7 +6,6 @@ import { shallowRef } from 'vue'
 
 import { useCanvasPositionConversion } from '@/composables/element/useCanvasPositionConversion'
 import { layoutStore } from '@/renderer/core/layout/store/layoutStore'
-import { syncLayoutStoreNodeBoundsFromGraph } from '@/renderer/core/layout/sync/syncLayoutStoreFromGraph'
 import { flushScheduledSlotLayoutSync } from '@/renderer/extensions/vueNodes/composables/useSlotElementTracking'
 
 import { promotedInputSource } from '@/core/graph/subgraph/promotedInputWidget'
@@ -1371,7 +1370,6 @@ export class ComfyApp {
 
     ChangeTracker.isLoadingGraph = true
     try {
-      let normalizedMainGraph = false
       try {
         // @ts-expect-error Discrepancies between zod and litegraph - in progress
         this.rootGraph.configure(graphData)
@@ -1381,10 +1379,7 @@ export class ComfyApp {
           this.rootGraph.extra.workflowRendererVersion
 
         // Scale main graph
-        normalizedMainGraph = ensureCorrectLayoutScale(
-          originalMainGraphRenderer,
-          this.rootGraph
-        )
+        ensureCorrectLayoutScale(originalMainGraphRenderer, this.rootGraph)
 
         // Scale all subgraphs that were loaded with the workflow
         // Use original main graph renderer as fallback (not the modified one)
@@ -1461,10 +1456,6 @@ export class ComfyApp {
 
         useExtensionService().invokeExtensions('loadedGraphNode', node)
       })
-
-      if (normalizedMainGraph) {
-        syncLayoutStoreNodeBoundsFromGraph(this.rootGraph)
-      }
 
       await useExtensionService().invokeExtensionsAsync(
         'afterConfigureGraph',
