@@ -2,8 +2,10 @@ import { expect, mergeTests } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { comfyPageFixture } from '@e2e/fixtures/ComfyPage'
+import { expectNoErrorUiForObservationWindow } from '@e2e/fixtures/helpers/ErrorsTabHelper'
 import {
   createRouteMockJob,
+  JobsRouteMocker,
   jobsRouteFixture,
   routeMockJobTimestamp
 } from '@e2e/fixtures/jobsRouteFixture'
@@ -145,6 +147,17 @@ async function mockViewFiles(page: Page, filesByName: ViewFilesByName) {
   })
 }
 
+const bulkInsertionTest = comfyPageFixture.extend({
+  page: async ({ page }, use) => {
+    const jobsRoutes = new JobsRouteMocker(page)
+    await jobsRoutes.mockJobsQueue([])
+    await jobsRoutes.mockJobsHistory(generatedJobs)
+    await mockInputFiles(page, [])
+    await mockViewFiles(page, viewFiles)
+    await use(page)
+  }
+})
+
 test.describe('FE-130 assets sidebar route mocks', () => {
   test.beforeEach(async ({ jobsRoutes, page }) => {
     await jobsRoutes.mockJobsQueue([])
@@ -276,6 +289,53 @@ test.describe('FE-130 assets sidebar route mocks', () => {
     )
   })
 })
+
+bulkInsertionTest.describe(
+  'Assets sidebar - bulk insert as nodes',
+  { tag: ['@vue-nodes', '@ui', '@node', '@widget'] },
+  () => {
+    bulkInsertionTest.use({
+      initialSettings: {
+        'Comfy.RightSidePanel.ShowErrorsTab': true
+      }
+    })
+
+    bulkInsertionTest.beforeEach(async ({ comfyPage }) => {
+      await comfyPage.command.executeCommand('Comfy.NewBlankWorkflow')
+      await expect.poll(() => comfyPage.nodeOps.getGraphNodesCount()).toBe(0)
+      await comfyPage.toast.closeToasts()
+      await expectNoErrorUiForObservationWindow(comfyPage)
+
+      const tab = comfyPage.menu.assetsTab
+      await tab.open()
+      await expect(tab.assetCards).toHaveCount(2)
+    })
+
+    bulkInsertionTest(
+      'does not surface errors for inserted output assets',
+      async ({ comfyPage }) => {
+        const tab = comfyPage.menu.assetsTab
+
+        await tab.getAssetCardByName('alpha').click()
+        await comfyPage.page.keyboard.down('Control')
+        await tab.getAssetCardByName('beta').click()
+        await comfyPage.page.keyboard.up('Control')
+        await expect(tab.selectedCards).toHaveCount(2)
+
+        await tab.getAssetCardByName('alpha').dispatchEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          button: 2
+        })
+        await expect(comfyPage.contextMenu.primeVueMenu).toBeVisible()
+        await tab.contextMenuItem('Insert all assets as nodes').click()
+
+        await expect.poll(() => comfyPage.vueNodes.getNodeCount()).toBe(2)
+        await expectNoErrorUiForObservationWindow(comfyPage)
+      }
+    )
+  }
+)
 
 test.describe('FE-910 marquee selection and select all', () => {
   test.beforeEach(async ({ jobsRoutes, page, comfyPage }) => {
