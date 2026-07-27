@@ -173,8 +173,8 @@ import { useNodeDataStore } from '@/stores/nodeDataStore'
 import { useCanvasStore } from '@/renderer/core/canvas/canvasStore'
 import { useCanvasInteractions } from '@/renderer/core/canvas/useCanvasInteractions'
 import { arrangeForLegacyRender } from '@/renderer/core/canvas/litegraph/arrangeForLegacyRender'
+import { notifyLayoutChanges } from '@/renderer/core/canvas/litegraph/notifyLayoutChanges'
 import { layoutStore } from '@/renderer/core/layout/store/layoutStore'
-import { useLayoutSync } from '@/renderer/core/layout/sync/useLayoutSync'
 import TransformPane from '@/renderer/core/layout/transform/TransformPane.vue'
 import MiniMap from '@/renderer/extensions/minimap/MiniMap.vue'
 import LGraphNode from '@/renderer/extensions/vueNodes/components/LGraphNode.vue'
@@ -257,13 +257,20 @@ const { shouldRenderVueNodes } = useVueFeatureFlags()
 // Layout↔LiteGraph sync. Node geometry registers itself in LGraph.add, so all
 // that is needed here is dropping view-scoped geometry when the viewed graph
 // changes and running the sync for as long as Vue nodes are rendering.
-const { startSync, stopSync } = useLayoutSync()
+let stopLayoutNotifications: (() => void) | null = null
+
+const stopSync = () => {
+  stopLayoutNotifications?.()
+  stopLayoutNotifications = null
+}
 
 const startVueNodeLayout = () => {
   layoutStore.clearViewGeometry()
-  // Start sync AFTER the reset so bootstrap operations don't trigger the
-  // Layout→LiteGraph writeback loop redundantly.
-  startSync(canvasStore.canvas)
+
+  const canvas = canvasStore.canvas
+  if (!canvas) return
+  stopSync()
+  stopLayoutNotifications = notifyLayoutChanges(canvas)
 }
 
 const stopVueNodeLayout = () => {
