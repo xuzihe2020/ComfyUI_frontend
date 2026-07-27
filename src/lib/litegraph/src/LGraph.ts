@@ -42,8 +42,10 @@ import { LGraphGroup } from './LGraphGroup'
 import type { GroupId } from './LGraphGroup'
 import {
   LGraphNode,
+  registerNodeLayout,
   registerNodeState,
   unregisterAllNodeStates,
+  unregisterNodeLayout,
   unregisterNodeState
 } from './LGraphNode'
 import {
@@ -1144,14 +1146,7 @@ export class LGraph
     // Geometry registers at attach, as it does for groups and reroutes. zIndex
     // is the draw order litegraph uses — the index in `_nodes` — not
     // `node.order`, which is execution order and unrelated to stacking.
-    const layoutMutations = useLayoutMutations()
-    layoutMutations.setSource(LayoutSource.Canvas)
-    layoutMutations.createNode(node.id, {
-      position: { x: node.pos[0], y: node.pos[1] },
-      size: { width: node.size[0], height: node.size[1] },
-      zIndex: this._nodes.length - 1,
-      visible: true
-    })
+    registerNodeLayout(node, this._nodes.length - 1)
 
     node.onAdded?.(this)
 
@@ -1263,9 +1258,7 @@ export class LGraph
 
     unregisterNodeState(node)
 
-    const layoutMutations = useLayoutMutations()
-    layoutMutations.setSource(LayoutSource.Canvas)
-    layoutMutations.deleteNode(node.id)
+    unregisterNodeLayout(node)
 
     node.graph = null
     this.incrementVersion()

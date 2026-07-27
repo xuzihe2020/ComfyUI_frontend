@@ -20,7 +20,9 @@ vi.mock('@/renderer/core/layout/store/layoutStore', () => ({
     getNodeLayoutRef: vi.fn(() => ({ value: null })),
     getSlotLayout: vi.fn(),
     setSource: vi.fn(),
-    batchUpdateNodeBounds: vi.fn()
+    batchUpdateNodeBounds: vi.fn(),
+    geometryVersion: 0,
+    readNodeRect: vi.fn(() => false)
   }
 }))
 
