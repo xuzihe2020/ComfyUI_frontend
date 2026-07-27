@@ -11,6 +11,7 @@ import { LiteGraph } from '@/lib/litegraph/src/litegraph'
 import { getSlotKey } from '@/renderer/core/layout/slots/slotIdentifier'
 import { layoutStore } from '@/renderer/core/layout/store/layoutStore'
 import { LayoutSource } from '@/renderer/core/layout/types'
+import { seedNodeLayout } from '@/renderer/core/layout/__fixtures__/seedNodeLayout'
 import type {
   LayoutChange,
   LayoutOperation,
@@ -39,7 +40,7 @@ beforeEach(() => {
 describe('layoutStore CRDT operations', () => {
   beforeEach(() => {
     // Clear the store before each test
-    layoutStore.initializeFromLiteGraph([])
+    layoutStore.reset()
   })
   // Helper to create test node data
   const createTestNode = (id: NodeId): NodeLayout => ({
@@ -308,19 +309,14 @@ describe('layoutStore CRDT operations', () => {
     unsubscribeGlobal()
   })
 
-  it('clears node-scoped listeners when reinitializing from LiteGraph', () => {
+  it('clears node-scoped listeners when the viewed graph changes', () => {
     const nodeId = toNodeId('reinit-node')
     const staleListener = vi.fn()
 
     layoutStore.onNodeChange(nodeId, staleListener)
 
-    layoutStore.initializeFromLiteGraph([
-      {
-        id: nodeId,
-        pos: [0, 0],
-        size: [200, 100]
-      }
-    ])
+    layoutStore.clearViewGeometry()
+    seedNodeLayout(nodeId, [0, 0], [200, 100], 0)
 
     layoutStore.applyOperation({
       type: 'moveNode',
@@ -676,7 +672,7 @@ describe('layoutStore CRDT operations', () => {
 
 describe('layoutStore getNodeLayoutRef setter', () => {
   beforeEach(() => {
-    layoutStore.initializeFromLiteGraph([])
+    layoutStore.reset()
   })
 
   const REF_NODE = toNodeId('ref-node')
@@ -780,7 +776,7 @@ describe('layoutStore getNodeLayoutRef setter', () => {
 
 describe('layoutStore queries', () => {
   beforeEach(() => {
-    layoutStore.initializeFromLiteGraph([])
+    layoutStore.reset()
   })
 
   const seedNode = (id: NodeId, x: number, y: number, z = 0) => {
@@ -838,7 +834,7 @@ describe('layoutStore queries', () => {
 
 describe('layoutStore link layout updates', () => {
   beforeEach(() => {
-    layoutStore.initializeFromLiteGraph([])
+    layoutStore.reset()
   })
 
   const stubPath = () => fromPartial<Path2D>({})

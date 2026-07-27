@@ -25,6 +25,7 @@ import { test } from './__fixtures__/testExtensions'
 import { NodeSlotType, TitleMode } from '@/lib/litegraph/src/types/globalEnums'
 import { createMockLGraphNodeWithArrayBoundingRect } from '@/utils/__tests__/litegraphTestUtils'
 import { toNodeId } from '@/types/nodeId'
+import { seedNodeLayout } from '@/renderer/core/layout/__fixtures__/seedNodeLayout'
 
 interface NodeConstructorWithSlotOffset {
   slot_start_y?: number
@@ -803,9 +804,7 @@ describe('snapToGrid', () => {
     graph.add(node)
     // Node layout entries are seeded by the renderer, so stand one up here;
     // without it the pos setter has nothing to commit to.
-    layoutStore.initializeFromLiteGraph([
-      { id: node.id, pos: [103, 97], size: [140, 60] }
-    ])
+    seedNodeLayout(node.id, [103, 97], [140, 60], 0)
 
     expect(node.snapToGrid(20)).toBe(true)
 
