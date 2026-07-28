@@ -300,7 +300,7 @@ export function useSubscriptionCheckout(
       const response = await subscribe(planSlug, {
         returnUrl: `${getComfyPlatformBaseUrl()}/payment/success`,
         cancelUrl: `${getComfyPlatformBaseUrl()}/payment/failed`,
-        checkoutInvoicePayment: true
+        useCheckout: true
       })
 
       if (response) {
@@ -419,7 +419,7 @@ export function useSubscriptionCheckout(
         cycle: context.cycle,
         checkoutType: context.checkoutType,
         paymentIntentSource,
-        hostedInvoiceReturnUrl: globalThis.location.href
+        checkoutReturnUrl: globalThis.location.href
       }
     )
     if (operation.status === 'succeeded') checkoutStep.value = 'success'
