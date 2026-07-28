@@ -448,7 +448,8 @@ export function useSubscriptionCheckout(
         teamCreditStopId: stop.id,
         billingCycle,
         returnUrl: `${getComfyPlatformBaseUrl()}/payment/success`,
-        cancelUrl: `${getComfyPlatformBaseUrl()}/payment/failed`
+        cancelUrl: `${getComfyPlatformBaseUrl()}/payment/failed`,
+        useCheckout: checkoutType === 'new'
       })
 
       if (response) {
