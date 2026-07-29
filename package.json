@@ -52,6 +52,7 @@
     "stylelint:fix": "stylelint --cache --fix '{apps,packages,src}/**/*.{css,vue}'",
     "stylelint": "stylelint --cache '{apps,packages,src}/**/*.{css,vue}'",
     "test:browser": "pnpm exec playwright test",
+    "test:editor-bridge:conformance": "node scripts/editor-bridge-conformance.mjs",
     "test:browser:coverage": "cross-env COLLECT_COVERAGE=true pnpm test:browser",
     "test:browser:local": "cross-env PLAYWRIGHT_LOCAL=1 PLAYWRIGHT_TEST_URL=http://localhost:5173 pnpm test:browser",
     "test:coverage": "vitest run --coverage",
