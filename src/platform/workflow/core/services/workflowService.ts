@@ -12,6 +12,10 @@ import {
 } from '@/platform/workflow/core/utils/pendingWarnings'
 import { useWorkflowDraftStoreV2 } from '@/platform/workflow/persistence/stores/workflowDraftStoreV2'
 import {
+  deleteNativeCompiledWorkflow,
+  persistNativeCompiledWorkflow
+} from '@/platform/workflow/persistence/services/editorBridgeWorkflowService'
+import {
   ComfyWorkflow,
   useWorkflowStore
 } from '@/platform/workflow/management/stores/workflowStore'
@@ -52,6 +56,16 @@ export const useWorkflowService = () => {
   const domWidgetStore = useDomWidgetStore()
   const missingNodesErrorStore = useMissingNodesErrorStore()
   const workflowDraftStore = useWorkflowDraftStoreV2()
+
+  const persistWorkflow = async (workflow: ComfyWorkflow) => {
+    if (!workflowStore.isActive(workflow)) {
+      throw new Error(
+        `Cannot compile background workflow "${workflow.path}". Open it before saving.`
+      )
+    }
+    await workflowStore.saveWorkflow(workflow)
+    await persistNativeCompiledWorkflow(workflow.path)
+  }
 
   const showFailedToSaveDraftToast = () => {
     toastStore.add({
@@ -181,7 +195,7 @@ export const useWorkflowService = () => {
     if (isSelfOverwrite) {
       workflow.changeTracker?.prepareForSave()
       // Call workflowStore.saveWorkflow directly: saveWorkflowAs emits its own is_new:true event below, so delegating to saveWorkflow() would also fire is_new:false and run prepareForSave a second time.
-      await workflowStore.saveWorkflow(workflow)
+      await persistWorkflow(workflow)
     } else {
       let target: ComfyWorkflow
       if (workflow.isTemporary) {
@@ -198,7 +212,7 @@ export const useWorkflowService = () => {
         target.initialMode = isApp ? 'app' : 'graph'
       }
       target.changeTracker?.prepareForSave()
-      await workflowStore.saveWorkflow(target)
+      await persistWorkflow(target)
     }
 
     useTelemetry()?.trackWorkflowSaved({ is_app: isApp, is_new: true })
@@ -222,7 +236,7 @@ export const useWorkflowService = () => {
       const existing = workflowStore.getWorkflowByPath(expectedPath)
       if (existing && !existing.isTemporary) {
         if ((await confirmOverwrite(expectedPath)) !== true) {
-          await workflowStore.saveWorkflow(workflow)
+          await persistWorkflow(workflow)
           return true
         }
         await deleteWorkflow(existing, true)
@@ -239,7 +253,7 @@ export const useWorkflowService = () => {
       })
     }
 
-    await workflowStore.saveWorkflow(workflow)
+    await persistWorkflow(workflow)
     useTelemetry()?.trackWorkflowSaved({ is_app: isApp, is_new: false })
     return true
   }
@@ -352,7 +366,13 @@ export const useWorkflowService = () => {
   }
 
   const renameWorkflow = async (workflow: ComfyWorkflow, newPath: string) => {
+    const previousPath = workflow.path
     await workflowStore.renameWorkflow(workflow, newPath)
+    try {
+      await deleteNativeCompiledWorkflow(previousPath)
+    } catch (error) {
+      console.warn('Failed to remove renamed workflow sidecar', error)
+    }
   }
 
   /**
@@ -383,7 +403,13 @@ export const useWorkflowService = () => {
       })
       if (!closed) return false
     }
+    const deletedPath = workflow.path
     await workflowStore.deleteWorkflow(workflow)
+    try {
+      await deleteNativeCompiledWorkflow(deletedPath)
+    } catch (error) {
+      console.warn('Failed to remove deleted workflow sidecar', error)
+    }
     if (!silent) {
       toastStore.add({
         severity: 'info',

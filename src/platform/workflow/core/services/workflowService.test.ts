@@ -61,8 +61,15 @@ function makeWorkflowData(
   }
 }
 
-const { mockConfirm, mockTrackWorkflowSaved } = vi.hoisted(() => ({
+const {
+  mockConfirm,
+  mockDeleteNativeCompiledWorkflow,
+  mockPersistNativeCompiledWorkflow,
+  mockTrackWorkflowSaved
+} = vi.hoisted(() => ({
   mockConfirm: vi.fn(),
+  mockDeleteNativeCompiledWorkflow: vi.fn(),
+  mockPersistNativeCompiledWorkflow: vi.fn(),
   mockTrackWorkflowSaved: vi.fn()
 }))
 
@@ -79,6 +86,14 @@ vi.mock('@/services/dialogService', () => ({
     confirm: mockConfirm
   })
 }))
+
+vi.mock(
+  '@/platform/workflow/persistence/services/editorBridgeWorkflowService',
+  () => ({
+    deleteNativeCompiledWorkflow: mockDeleteNativeCompiledWorkflow,
+    persistNativeCompiledWorkflow: mockPersistNativeCompiledWorkflow
+  })
+)
 
 vi.mock('@/scripts/app', () => ({
   app: {
@@ -493,6 +508,7 @@ describe('useWorkflowService', () => {
     beforeEach(() => {
       setActivePinia(createTestingPinia())
       workflowStore = useWorkflowStore()
+      vi.mocked(workflowStore.isActive).mockReturnValue(true)
     })
 
     it('should delegate to workflowStore.saveWorkflow for persisted workflows', async () => {
@@ -505,6 +521,20 @@ describe('useWorkflowService', () => {
 
       expect(result).toBe(true)
       expect(workflowStore.saveWorkflow).toHaveBeenCalledWith(workflow)
+    })
+
+    it('refuses to compile a workflow that is not the active graph', async () => {
+      const workflow = createModeTestWorkflow({
+        path: 'workflows/background.json'
+      })
+      vi.mocked(workflowStore.isActive).mockReturnValue(false)
+
+      await expect(useWorkflowService().saveWorkflow(workflow)).rejects.toThrow(
+        'Cannot compile background workflow'
+      )
+
+      expect(workflowStore.saveWorkflow).not.toHaveBeenCalled()
+      expect(mockPersistNativeCompiledWorkflow).not.toHaveBeenCalled()
     })
 
     it('should return false when temporary workflow save is cancelled', async () => {
@@ -528,6 +558,7 @@ describe('useWorkflowService', () => {
     beforeEach(() => {
       workflowStore = useWorkflowStore()
       service = useWorkflowService()
+      vi.spyOn(workflowStore, 'isActive').mockReturnValue(true)
     })
 
     it('keeps a temporary workflow open when Save As is cancelled', async () => {
@@ -939,6 +970,7 @@ describe('useWorkflowService', () => {
     beforeEach(() => {
       workflowStore = useWorkflowStore()
       service = useWorkflowService()
+      vi.spyOn(workflowStore, 'isActive').mockReturnValue(true)
       vi.spyOn(workflowStore, 'saveWorkflow').mockResolvedValue()
       vi.spyOn(workflowStore, 'renameWorkflow').mockResolvedValue()
       mockTrackWorkflowSaved.mockClear()
@@ -1279,6 +1311,7 @@ describe('useWorkflowService', () => {
       workflowStore = useWorkflowStore()
       toastStore = useToastStore()
       service = useWorkflowService()
+      vi.spyOn(workflowStore, 'isActive').mockReturnValue(true)
       vi.spyOn(workflowStore, 'saveWorkflow').mockResolvedValue()
       vi.spyOn(workflowStore, 'renameWorkflow').mockResolvedValue()
     })
