@@ -132,6 +132,74 @@ describe('editorBridgeWorkflowService', () => {
     ])
   })
 
+  it('compiles a primitive binding against its downstream backend input', () => {
+    const metadata = {
+      version: 1,
+      endpoint: {
+        key: 'denoise_01',
+        expose_all_fields: true,
+        field_config: {
+          denoise: { required_from_editor: true, kind: 'string' }
+        }
+      }
+    }
+    expect(
+      extractEditorBindings({
+        nodes: [
+          {
+            id: 26,
+            type: 'PrimitiveNode',
+            title: 'Denoise',
+            outputs: [{ links: [41] }],
+            properties: { comfyui_editor_bridge: metadata }
+          },
+          {
+            id: 17,
+            type: 'SplitSigmasDenoise',
+            inputs: [
+              { name: 'sigmas', type: 'SIGMAS' },
+              { name: 'denoise', type: 'FLOAT' }
+            ],
+            properties: {}
+          }
+        ],
+        links: [[41, 26, 0, 17, 1, 'FLOAT']]
+      })
+    ).toEqual([
+      {
+        node_id: 17,
+        node_type: 'SplitSigmasDenoise',
+        graph_scope: 'top_level',
+        title: 'Denoise',
+        metadata
+      }
+    ])
+  })
+
+  it('rejects a primitive binding that fans out to multiple inputs', () => {
+    const metadata = {
+      version: 1,
+      endpoint: { key: 'shared_value', expose_all_fields: true }
+    }
+    expect(() =>
+      extractEditorBindings({
+        nodes: [
+          {
+            id: 3,
+            type: 'PrimitiveNode',
+            properties: { comfyui_editor_bridge: metadata }
+          },
+          { id: 4, type: 'NodeA', inputs: [{ name: 'value' }] },
+          { id: 5, type: 'NodeB', inputs: [{ name: 'value' }] }
+        ],
+        links: [
+          [1, 3, 0, 4, 0, 'FLOAT'],
+          [2, 3, 0, 5, 0, 'FLOAT']
+        ]
+      })
+    ).toThrow('must control exactly one executable ComfyUI input')
+  })
+
   it('rejects bindings on subgraph instances and inside definitions', () => {
     const metadata = {
       version: 1,

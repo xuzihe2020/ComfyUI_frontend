@@ -5,6 +5,7 @@ import { readEditorBinding } from '@/platform/workflow/persistence/editorBridgeB
 
 import {
   collectEditorBindingFields,
+  collectPrimitiveEditorBindingTargets,
   duplicateEndpointNodeId
 } from './editorBridgeBindingFields'
 
@@ -51,5 +52,34 @@ describe('editorBridgeBindingFields', () => {
         readEditorBinding
       )
     ).toBe(2)
+  })
+
+  it('resolves a primitive to its single executable downstream field', () => {
+    const target = {
+      id: 17,
+      comfyClass: 'SplitSigmasDenoise',
+      inputs: [
+        { name: 'sigmas', type: 'SIGMAS' },
+        { name: 'denoise', type: 'FLOAT' }
+      ]
+    }
+    const primitive = {
+      id: 26,
+      type: 'PrimitiveNode',
+      outputs: [{ links: [41] }],
+      graph: {
+        links: { 41: { target_id: 17, target_slot: 1 } },
+        getNodeById: (id: number) => (id === 17 ? target : null)
+      }
+    } as unknown as LGraphNode
+
+    const targets = collectPrimitiveEditorBindingTargets(primitive)
+    expect(targets).toHaveLength(1)
+    expect(targets[0].node).toBe(target)
+    expect(targets[0].field).toEqual({
+      name: 'denoise',
+      type: 'FLOAT',
+      connected: false
+    })
   })
 })

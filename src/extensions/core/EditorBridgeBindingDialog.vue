@@ -12,19 +12,19 @@
     </header>
 
     <div
-      v-if="!backendClass"
-      role="status"
-      class="rounded-lg bg-secondary-background p-4 text-sm"
-    >
-      {{ t('editorBridgeBinding.nonExecutable') }}
-    </div>
-
-    <div
-      v-else-if="unsupportedReason"
+      v-if="unsupportedReason"
       role="alert"
       class="rounded-lg bg-warning-background p-4 text-sm"
     >
       {{ unsupportedReason }}
+    </div>
+
+    <div
+      v-else-if="!backendClass"
+      role="status"
+      class="rounded-lg bg-secondary-background p-4 text-sm"
+    >
+      {{ t('editorBridgeBinding.nonExecutable') }}
     </div>
 
     <template v-else>

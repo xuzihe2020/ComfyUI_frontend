@@ -12,6 +12,7 @@ import { useDialogService } from '@/services/dialogService'
 import EditorBridgeBindingDialog from './EditorBridgeBindingDialog.vue'
 import {
   collectEditorBindingFields,
+  collectPrimitiveEditorBindingTargets,
   duplicateEndpointNodeId
 } from './editorBridgeBindingFields'
 import type { EditorBindingDialogDraft } from './editorBridgeBindingFields'
@@ -75,7 +76,19 @@ function unsupportedSubgraphReason(node: LGraphNode) {
 
 function editBinding(node: LGraphNode) {
   const existing = readEditorBinding(node.properties?.[EDITOR_BINDING_PROPERTY])
-  const unsupportedReason = unsupportedSubgraphReason(node)
+  const primitiveTargets = collectPrimitiveEditorBindingTargets(node)
+  const primitiveReason =
+    node.type !== 'PrimitiveNode'
+      ? ''
+      : primitiveTargets.length === 0
+        ? t('editorBridgeBinding.primitiveTargetMissing')
+        : primitiveTargets.length > 1
+          ? t('editorBridgeBinding.primitiveTargetMultiple')
+          : ''
+  const unsupportedReason = unsupportedSubgraphReason(node) || primitiveReason
+  const primitiveTarget =
+    primitiveTargets.length === 1 ? primitiveTargets[0] : null
+  const executableNode = primitiveTarget?.node ?? node
   useDialogService().showExtensionDialog({
     key: `editor-bridge-binding-${node.id}`,
     title: t('editorBridgeBinding.title'),
@@ -83,9 +96,11 @@ function editBinding(node: LGraphNode) {
     props: {
       nodeTitle:
         node.title ?? node.comfyClass ?? t('editorBridgeBinding.title'),
-      backendClass: node.comfyClass ?? '',
+      backendClass: executableNode.comfyClass ?? '',
       nodeId: String(node.id),
-      fields: collectEditorBindingFields(node),
+      fields: primitiveTarget
+        ? [primitiveTarget.field]
+        : collectEditorBindingFields(node),
       initialKey: existing?.endpoint.key ?? '',
       initialLabel: existing?.endpoint.label ?? '',
       initialFieldConfig: existing?.endpoint.field_config ?? {},

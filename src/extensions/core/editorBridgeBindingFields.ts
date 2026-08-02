@@ -13,6 +13,11 @@ export type EditorBindingDialogDraft = {
   fieldConfig: Record<string, Record<string, unknown>>
 }
 
+export type PrimitiveEditorBindingTarget = {
+  node: LGraphNode
+  field: EditorBindingField
+}
+
 type BindingNodeSummary = {
   id: string | number
   properties?: Record<string, unknown>
@@ -43,6 +48,31 @@ export function collectEditorBindingFields(node: LGraphNode) {
     })
   }
   return [...fields.values()]
+}
+
+export function collectPrimitiveEditorBindingTargets(
+  node: LGraphNode
+): PrimitiveEditorBindingTarget[] {
+  if (node.type !== 'PrimitiveNode' || !node.graph) return []
+  const targets = new Map<string, PrimitiveEditorBindingTarget>()
+  for (const output of node.outputs ?? []) {
+    for (const linkId of output.links ?? []) {
+      const link = node.graph.links[linkId]
+      if (!link) continue
+      const targetNode = node.graph.getNodeById(link.target_id)
+      const input = targetNode?.inputs?.[link.target_slot]
+      if (!targetNode?.comfyClass || !input?.name) continue
+      targets.set(`${String(targetNode.id)}:${link.target_slot}`, {
+        node: targetNode,
+        field: {
+          name: input.name,
+          type: typeLabel(input.type),
+          connected: false
+        }
+      })
+    }
+  }
+  return [...targets.values()]
 }
 
 export function duplicateEndpointNodeId(

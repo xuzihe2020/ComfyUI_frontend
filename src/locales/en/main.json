@@ -4698,6 +4698,8 @@
     "nodeId": "Node {id}",
     "noBackend": "No backend class",
     "nonExecutable": "This frontend-only node has no executable ComfyUI fields and cannot be exposed to the editor.",
+    "primitiveTargetMissing": "This primitive is not connected directly to an executable ComfyUI input. Connect it to exactly one backend field before exposing it.",
+    "primitiveTargetMultiple": "This primitive controls multiple executable ComfyUI inputs. Editor exposure currently requires exactly one downstream field.",
     "endpointKey": "Canonical endpoint key",
     "endpointPlaceholder": "unique_endpoint_01",
     "label": "Display label (optional)",

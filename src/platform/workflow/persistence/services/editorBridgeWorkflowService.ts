@@ -37,6 +37,59 @@ function collectSubgraphDefinitions(workflow: Record<string, unknown>) {
   return collected
 }
 
+function sameNodeId(left: unknown, right: unknown) {
+  return (
+    (typeof left === 'string' || typeof left === 'number') &&
+    (typeof right === 'string' || typeof right === 'number') &&
+    String(left) === String(right)
+  )
+}
+
+function primitiveTarget(
+  workflow: Record<string, unknown>,
+  nodes: unknown[],
+  primitive: Record<string, unknown>
+) {
+  const links = Array.isArray(workflow.links) ? workflow.links : []
+  const targets = new Map<string, { nodeId: string | number; slot: number }>()
+  for (const linkValue of links) {
+    const link = objectValue(linkValue)
+    const originId = Array.isArray(linkValue) ? linkValue[1] : link?.origin_id
+    const targetId = Array.isArray(linkValue) ? linkValue[3] : link?.target_id
+    const targetSlot = Array.isArray(linkValue)
+      ? linkValue[4]
+      : link?.target_slot
+    if (
+      !sameNodeId(originId, primitive.id) ||
+      (typeof targetId !== 'string' && typeof targetId !== 'number') ||
+      typeof targetSlot !== 'number'
+    ) {
+      continue
+    }
+    targets.set(`${String(targetId)}:${targetSlot}`, {
+      nodeId: targetId,
+      slot: targetSlot
+    })
+  }
+  if (targets.size !== 1) {
+    throw new Error(
+      `Primitive editor binding on node ${String(primitive.id)} must control exactly one executable ComfyUI input.`
+    )
+  }
+  const [{ nodeId, slot }] = targets.values()
+  const target = nodes
+    .map(objectValue)
+    .find((candidate) => sameNodeId(candidate?.id, nodeId))
+  const inputs = Array.isArray(target?.inputs) ? target.inputs : []
+  const input = objectValue(inputs[slot])
+  if (typeof target?.type !== 'string' || typeof input?.name !== 'string') {
+    throw new Error(
+      `Primitive editor binding on node ${String(primitive.id)} does not resolve to an executable ComfyUI input.`
+    )
+  }
+  return { nodeId, nodeType: target.type }
+}
+
 export function extractEditorBindings(workflow: unknown): EditorBinding[] {
   const workflowObject = objectValue(workflow)
   if (!workflowObject) return []
@@ -71,16 +124,22 @@ export function extractEditorBindings(workflow: unknown): EditorBinding[] {
   const bindings: EditorBinding[] = []
   for (const nodeValue of nodes) {
     const node = objectValue(nodeValue)
+    if (!node) continue
     const properties = objectValue(node?.properties)
     const metadata = objectValue(properties?.comfyui_editor_bridge)
-    const nodeId = node?.id
-    const nodeType = node?.type
+    let nodeId = node?.id
+    let nodeType = node?.type
     if (
       !metadata ||
       (typeof nodeId !== 'string' && typeof nodeId !== 'number') ||
       typeof nodeType !== 'string'
     ) {
       continue
+    }
+    if (nodeType === 'PrimitiveNode') {
+      const target = primitiveTarget(workflowObject, nodes, node)
+      nodeId = target.nodeId
+      nodeType = target.nodeType
     }
     if (subgraphTypes.has(nodeType)) {
       throw new Error(
