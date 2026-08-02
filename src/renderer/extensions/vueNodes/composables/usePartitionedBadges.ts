@@ -2,6 +2,7 @@ import { trim } from 'es-toolkit'
 import { computed, toValue } from 'vue'
 
 import type { VueNodeData } from '@/composables/graph/useGraphNodeManager'
+import { withoutCoreNodeBadge } from '@/composables/node/nodeBadgeTags'
 import { useNodePricing } from '@/composables/node/useNodePricing'
 import { usePriceBadge } from '@/composables/node/usePriceBadge'
 import type { LGraphNode } from '@/lib/litegraph/src/LGraphNode'
@@ -178,7 +179,7 @@ export function usePartitionedBadges(nodeData: VueNodeData) {
         }
       }
     }
-    return [...(nodeData?.badges ?? [])].map(toValue)
+    return withoutCoreNodeBadge([...(nodeData?.badges ?? [])]).map(toValue)
   })
   const nodeDef = useNodeDefStore().nodeDefsByName[nodeData.type]
   return computed(() => {
@@ -210,7 +211,7 @@ export function usePartitionedBadges(nodeData: VueNodeData) {
     )
       core.push({ text: sourceText })
 
-    for (const badge of unpartitionedBadges.value.slice(1)) {
+    for (const badge of unpartitionedBadges.value) {
       if (!badge.text) continue
 
       if (isCreditsBadge(badge)) {

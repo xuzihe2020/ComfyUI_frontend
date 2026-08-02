@@ -1,6 +1,7 @@
 import _ from 'es-toolkit/compat'
 import { computed, onMounted, watch } from 'vue'
 
+import { markCoreNodeBadge } from '@/composables/node/nodeBadgeTags'
 import { useNodePricing } from '@/composables/node/useNodePricing'
 import { usePriceBadge } from '@/composables/node/usePriceBadge'
 import { useComputedWithWidgetWatch } from '@/composables/node/useWatchWidget'
@@ -119,7 +120,7 @@ export const useNodeBadge = () => {
           })
         })
 
-        node.badges.push(() => badge.value)
+        node.badges.push(markCoreNodeBadge(() => badge.value))
 
         if (node.constructor.nodeData?.api_node && showApiPricingBadge.value) {
           // JSONata rules are dynamic if they depend on any widgets/inputs/input_groups

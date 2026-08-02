@@ -31,6 +31,16 @@ function editorBindingBadge(node: LGraphNode) {
   })
 }
 
+function refreshEditorBindingBadge(node: LGraphNode) {
+  node.graph?.trigger('node:property:changed', {
+    type: 'node:property:changed',
+    nodeId: node.id,
+    property: 'badges',
+    oldValue: node.badges,
+    newValue: [...node.badges]
+  })
+}
+
 function saveBinding(node: LGraphNode, draft: EditorBindingDialogDraft) {
   try {
     const metadata = createEditorBinding(
@@ -53,6 +63,7 @@ function saveBinding(node: LGraphNode, draft: EditorBindingDialogDraft) {
     node.graph?.beforeChange(node)
     node.setProperty(EDITOR_BINDING_PROPERTY, metadata)
     node.graph?.afterChange(node)
+    refreshEditorBindingBadge(node)
     node.setDirtyCanvas(true, true)
     return null
   } catch (error) {
@@ -64,6 +75,7 @@ function removeBinding(node: LGraphNode) {
   node.graph?.beforeChange(node)
   delete node.properties?.[EDITOR_BINDING_PROPERTY]
   node.graph?.afterChange(node)
+  refreshEditorBindingBadge(node)
   node.setDirtyCanvas(true, true)
 }
 
