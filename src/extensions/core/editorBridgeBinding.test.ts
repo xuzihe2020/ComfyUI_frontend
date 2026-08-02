@@ -6,7 +6,9 @@ const { state } = vi.hoisted(() => ({
   state: {
     extension: null as {
       nodeCreated: (node: {
-        badges: Array<() => { text: string; onClick?: () => void }>
+        badges: Array<
+          () => { text: string; bgColor: string; onClick?: () => void }
+        >
         properties: Record<string, unknown>
       }) => void
     } | null
@@ -29,7 +31,9 @@ await import('./editorBridgeBinding')
 
 function makeNode(exposed = false) {
   return {
-    badges: [] as Array<() => { text: string; onClick?: () => void }>,
+    badges: [] as Array<
+      () => { text: string; bgColor: string; onClick?: () => void }
+    >,
     properties: exposed
       ? {
           comfyui_editor_bridge: createEditorBinding(
@@ -49,6 +53,7 @@ describe('Comfy.EditorBridgeBinding node badge', () => {
 
     const badge = node.badges[0]()
     expect(badge.text).toBe('EDITOR: checkpoint_01')
+    expect(badge.bgColor).toBe('#c2410c')
     expect(badge.onClick).toBeTypeOf('function')
   })
 

@@ -25,7 +25,7 @@ function editorBindingBadge(node: LGraphNode) {
       ? t('editorBridgeBinding.badge', { key: binding.endpoint.key })
       : '',
     fgColor: '#ffffff',
-    bgColor: '#2563eb',
+    bgColor: '#c2410c',
     onClick: binding ? () => editBinding(node) : undefined
   })
 }
