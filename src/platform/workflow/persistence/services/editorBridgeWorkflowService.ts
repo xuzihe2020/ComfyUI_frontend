@@ -4,6 +4,7 @@ import { app } from '@/scripts/app'
 
 const COMPILED_WORKFLOW_ENDPOINT =
   '/editor-bridge/v1/workflows/compiled' as const
+const PRODUCTION_WORKFLOW_PREFIX = 'workflows/prod/' as const
 
 type EditorBinding = {
   node_id: string | number
@@ -166,6 +167,14 @@ async function responseError(response: Response): Promise<Error> {
   )
 }
 
+export function isProductionWorkflowPath(workflowPath: string): boolean {
+  const normalized = workflowPath.trim().replaceAll('\\', '/')
+  return (
+    normalized.startsWith(PRODUCTION_WORKFLOW_PREFIX) &&
+    normalized.endsWith('.json')
+  )
+}
+
 /**
  * Compile the active UI workflow through ComfyUI's native graph compiler and
  * persist the resulting API prompt in the editor bridge's disposable cache.
@@ -176,6 +185,8 @@ async function responseError(response: Response): Promise<Error> {
 export async function persistNativeCompiledWorkflow(
   workflowPath: string
 ): Promise<void> {
+  if (!isProductionWorkflowPath(workflowPath)) return
+
   const { output, workflow } = await app.graphToPrompt()
   const response = await api.fetchApi(COMPILED_WORKFLOW_ENDPOINT, {
     method: 'PUT',

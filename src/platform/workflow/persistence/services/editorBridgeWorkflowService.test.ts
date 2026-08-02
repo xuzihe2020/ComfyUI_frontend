@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   deleteNativeCompiledWorkflow,
   extractEditorBindings,
+  isProductionWorkflowPath,
   persistNativeCompiledWorkflow
 } from './editorBridgeWorkflowService'
 
@@ -76,6 +77,29 @@ describe('editorBridgeWorkflowService', () => {
           frontend_version: '1.45.15-test'
         })
       }
+    )
+  })
+
+  it.each([
+    'workflows/example.json',
+    'workflows/exp/example.json',
+    'workflows/utility/example.json',
+    'workflows/production/example.json'
+  ])('does not compile non-production workflow %s', async (workflowPath) => {
+    await persistNativeCompiledWorkflow(workflowPath)
+
+    expect(mockGraphToPrompt).not.toHaveBeenCalled()
+    expect(mockFetchApi).not.toHaveBeenCalled()
+  })
+
+  it('recognizes only JSON workflows beneath the exact prod directory', () => {
+    expect(isProductionWorkflowPath('workflows/prod/example.json')).toBe(true)
+    expect(isProductionWorkflowPath('workflows\\prod\\nested\\example.json')).toBe(
+      true
+    )
+    expect(isProductionWorkflowPath('workflows/prod/example.png')).toBe(false)
+    expect(isProductionWorkflowPath('workflows/production/example.json')).toBe(
+      false
     )
   })
 
