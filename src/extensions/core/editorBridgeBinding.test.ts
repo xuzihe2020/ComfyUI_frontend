@@ -11,6 +11,12 @@ const { state } = vi.hoisted(() => ({
         >
         properties: Record<string, unknown>
       }) => void
+      loadedGraphNode: (node: {
+        badges: Array<
+          () => { text: string; bgColor: string; onClick?: () => void }
+        >
+        properties: Record<string, unknown>
+      }) => void
     } | null
   }
 }))
@@ -47,6 +53,14 @@ function makeNode(exposed = false) {
 }
 
 describe('Comfy.EditorBridgeBinding node badge', () => {
+  it('attaches to a frontend node loaded from a workflow', () => {
+    const node = makeNode(true)
+    state.extension!.loadedGraphNode(node)
+
+    expect(node.badges).toHaveLength(1)
+    expect(node.badges[0]().text).toBe('EDITOR: checkpoint_01')
+  })
+
   it('shows the endpoint key for an exposed node loaded from a workflow', () => {
     const node = makeNode(true)
     state.extension!.nodeCreated(node)

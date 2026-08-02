@@ -17,6 +17,8 @@ import {
 } from './editorBridgeBindingFields'
 import type { EditorBindingDialogDraft } from './editorBridgeBindingFields'
 
+const EDITOR_BINDING_BADGE = Symbol('editor-binding-badge')
+
 function editorBindingBadge(node: LGraphNode) {
   const binding = readEditorBinding(
     node.properties?.[EDITOR_BINDING_PROPERTY]
@@ -29,6 +31,24 @@ function editorBindingBadge(node: LGraphNode) {
     bgColor: '#c2410c',
     onClick: binding ? () => editBinding(node) : undefined
   })
+}
+
+function ensureEditorBindingBadge(node: LGraphNode) {
+  const existing = node.badges.find(
+    (badge) =>
+      typeof badge === 'function' &&
+      Boolean(
+        (badge as (() => LGraphBadge) & {
+          [EDITOR_BINDING_BADGE]?: true
+        })[EDITOR_BINDING_BADGE]
+      )
+  )
+  if (existing) return
+  const getter = (() => editorBindingBadge(node)) as (() => LGraphBadge) & {
+    [EDITOR_BINDING_BADGE]?: true
+  }
+  getter[EDITOR_BINDING_BADGE] = true
+  node.badges.push(getter)
 }
 
 function refreshEditorBindingBadge(node: LGraphNode) {
@@ -63,6 +83,7 @@ function saveBinding(node: LGraphNode, draft: EditorBindingDialogDraft) {
     node.graph?.beforeChange(node)
     node.setProperty(EDITOR_BINDING_PROPERTY, metadata)
     node.graph?.afterChange(node)
+    ensureEditorBindingBadge(node)
     refreshEditorBindingBadge(node)
     node.setDirtyCanvas(true, true)
     return null
@@ -135,7 +156,10 @@ function editBinding(node: LGraphNode) {
 app.registerExtension({
   name: 'Comfy.EditorBridgeBinding',
   nodeCreated(node) {
-    node.badges.push(() => editorBindingBadge(node))
+    ensureEditorBindingBadge(node)
+  },
+  loadedGraphNode(node) {
+    ensureEditorBindingBadge(node)
   },
   getNodeMenuItems(node) {
     const existing = readEditorBinding(
