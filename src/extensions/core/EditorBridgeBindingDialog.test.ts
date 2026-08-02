@@ -4,13 +4,21 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { i18n } from '@/i18n'
+import { api } from '@/scripts/api'
 import { useDialogStore } from '@/stores/dialogStore'
 
 import EditorBridgeBindingDialog from './EditorBridgeBindingDialog.vue'
 
+vi.mock('@/scripts/api', () => ({ api: { fetchApi: vi.fn() } }))
+
 describe('EditorBridgeBindingDialog', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.mocked(api.fetchApi).mockResolvedValue(
+      new Response(
+        JSON.stringify(['checkpoints', 'diffusion_models', 'loras', 'vae'])
+      )
+    )
   })
 
   it('builds typed field hints without raw JSON editing', async () => {
@@ -85,6 +93,51 @@ describe('EditorBridgeBindingDialog', () => {
       'Endpoint key is already used by node 8.'
     )
     expect(closeSpy).not.toHaveBeenCalled()
+  })
+
+  it('shows and saves a registered model category', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(() => null)
+    render(EditorBridgeBindingDialog, {
+      global: { plugins: [i18n] },
+      props: {
+        nodeTitle: 'Load Diffusion Model',
+        backendClass: 'UNETLoader',
+        nodeId: '8',
+        fields: [
+          { name: 'unet_name', type: 'COMBO', connected: false },
+          { name: 'weight_dtype', type: 'COMBO', connected: false }
+        ],
+        initialKey: 'diffusion_model_01',
+        initialLabel: '',
+        initialFieldConfig: {},
+        canRemove: false,
+        onSave,
+        onRemove: vi.fn()
+      }
+    })
+
+    await user.selectOptions(
+      screen.getByRole('combobox', {
+        name: /editor value kind for unet_name/i
+      }),
+      'model'
+    )
+    const category = screen.getByLabelText(/comfyui model category/i)
+    await screen.findByRole('option', { name: 'diffusion_models' })
+    await user.selectOptions(category, 'diffusion_models')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(onSave).toHaveBeenCalledWith({
+      key: 'diffusion_model_01',
+      label: '',
+      fieldConfig: {
+        unet_name: {
+          kind: 'model',
+          model_category: 'diffusion_models'
+        }
+      }
+    })
   })
 
   it('explains unsupported subgraph bindings and only allows removal', async () => {

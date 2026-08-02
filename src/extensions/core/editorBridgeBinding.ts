@@ -1,4 +1,5 @@
 import type { LGraphNode } from '@/lib/litegraph/src/LGraphNode'
+import { LGraphBadge } from '@/lib/litegraph/src/LGraphBadge'
 import { t } from '@/i18n'
 import {
   createEditorBinding,
@@ -14,6 +15,20 @@ import {
   duplicateEndpointNodeId
 } from './editorBridgeBindingFields'
 import type { EditorBindingDialogDraft } from './editorBridgeBindingFields'
+
+function editorBindingBadge(node: LGraphNode) {
+  const binding = readEditorBinding(
+    node.properties?.[EDITOR_BINDING_PROPERTY]
+  )
+  return new LGraphBadge({
+    text: binding
+      ? t('editorBridgeBinding.badge', { key: binding.endpoint.key })
+      : '',
+    fgColor: '#ffffff',
+    bgColor: '#2563eb',
+    onClick: binding ? () => editBinding(node) : undefined
+  })
+}
 
 function saveBinding(node: LGraphNode, draft: EditorBindingDialogDraft) {
   try {
@@ -92,6 +107,9 @@ function editBinding(node: LGraphNode) {
 
 app.registerExtension({
   name: 'Comfy.EditorBridgeBinding',
+  nodeCreated(node) {
+    node.badges.push(() => editorBindingBadge(node))
+  },
   getNodeMenuItems(node) {
     const existing = readEditorBinding(
       node.properties?.[EDITOR_BINDING_PROPERTY]

@@ -127,14 +127,44 @@
             class="flex flex-col gap-1 text-sm"
           >
             <span>{{ t('editorBridgeBinding.modelCategory') }}</span>
-            <Input v-model="field.modelCategory" />
+            <select
+              v-model="field.modelCategory"
+              class="h-10 rounded-lg border border-border-default bg-tertiary-background px-3 text-sm text-base-foreground focus-visible:ring-1 focus-visible:ring-border-default focus-visible:outline-none"
+            >
+              <option value="" disabled>
+                {{
+                  modelCategoriesLoading
+                    ? t('editorBridgeBinding.loadingModelCategories')
+                    : t('editorBridgeBinding.selectModelCategory')
+                }}
+              </option>
+              <option
+                v-if="
+                  field.modelCategory &&
+                  !modelCategories.includes(field.modelCategory)
+                "
+                :value="field.modelCategory"
+              >
+                {{ field.modelCategory }}
+              </option>
+              <option
+                v-for="category in modelCategories"
+                :key="category"
+                :value="category"
+              >
+                {{ category }}
+              </option>
+            </select>
           </label>
           <label
             v-if="field.kind === 'server_path'"
             class="flex flex-col gap-1 text-sm"
           >
             <span>{{ t('editorBridgeBinding.serverPathRoot') }}</span>
-            <Input v-model="field.serverPathRoot" />
+            <Input
+              v-model="field.serverPathRoot"
+              class="border border-border-default bg-tertiary-background"
+            />
           </label>
           <div v-if="field.kind === 'mask'" class="grid gap-3 sm:grid-cols-2">
             <label class="flex flex-col gap-1 text-sm">
@@ -192,11 +222,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import Button from '@/components/ui/button/Button.vue'
 import Input from '@/components/ui/input/Input.vue'
+import { api } from '@/scripts/api'
 import { useDialogStore } from '@/stores/dialogStore'
 
 import type {
@@ -243,6 +274,8 @@ const { t } = useI18n()
 const endpointKey = ref(initialKey)
 const endpointLabel = ref(initialLabel)
 const errorMessage = ref('')
+const modelCategories = ref<string[]>([])
+const modelCategoriesLoading = ref(true)
 const fieldStates = ref(
   fields.map((field) => {
     const hint = initialFieldConfig[field.name] ?? {}
@@ -261,6 +294,24 @@ const fieldStates = ref(
     } satisfies EditorBindingField & FieldHint
   })
 )
+
+onMounted(async () => {
+  try {
+    const response = await api.fetchApi('/models')
+    const values: unknown = await response.json()
+    if (!Array.isArray(values)) return
+    const categories = values.filter(
+      (value: unknown): value is string => typeof value === 'string' && !!value
+    )
+    modelCategories.value = [...new Set(categories)].sort((left, right) =>
+      left.localeCompare(right)
+    )
+  } catch {
+    modelCategories.value = []
+  } finally {
+    modelCategoriesLoading.value = false
+  }
+})
 
 function close() {
   useDialogStore().closeDialog()
